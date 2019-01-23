@@ -1,11 +1,9 @@
-import { each } from '../index.js'
-const dot = item => dot * dot
+import { each } from '../src/index.js'
 const sleep = time => {
   return new Promise((resolve, reject) => {
     setTimeout(() => resolve(`[Sleep]: ${time}ms`), time)
   })
 }
-
 
 each({
   task: [
@@ -23,21 +21,21 @@ each({
     },
     async () => {
       await sleep(500)
-      return Promise.reject('not 4')
+      return Promise.reject(new Error('not 4'))
     },
     async () => {
       await sleep(500)
       return Promise.resolve(5)
     },
   ],
-  handerStart: (step) => {
-    console.log(`begin hander at step ${step}`)
+  handleStart: ({ step }) => {
+    console.log(`begin handle at step ${step}`)
   },
-  handerEnd: (step, res) => {
-    console.log(`end hander at step ${step}, answer is ${res}`)
+  handleEnd: ({ step, output }) => {
+    console.log(`end handle at step ${step}, answer is ${output}`)
   },
   randomStep: true,
-})
-.then(res => {
+  stepBettwen: [100, 200],
+}).then(res => {
   console.log(res)
 })

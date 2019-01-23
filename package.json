@@ -5,20 +5,29 @@
   "main": "index.js",
   "scripts": {
     "testMap": "babel-node test/map.js",
-    "testEach": "babel-node test/each.js"
+    "testEach": "babel-node test/each.js",
+    "testEvent": "babel-node test/event.js",
+    "lint": "eslint -c .eslintrc.js src --fix"
   },
   "keywords": [
     "async-multiple",
-    "aysnc-task"
+    "async-task"
   ],
   "author": "aim-leo",
   "license": "ISC",
   "devDependencies": {
     "babel-cli": "^6.26.0",
+    "babel-eslint": "^10.0.1",
     "babel-plugin-transform-runtime": "^6.23.0",
     "babel-preset-es2015": "^6.24.1",
     "babel-preset-stage-0": "^6.24.1",
-    "babel-runtime": "^6.26.0"
+    "babel-runtime": "^6.26.0",
+    "eslint": "^5.12.0",
+    "eslint-config-standard": "^12.0.0",
+    "eslint-plugin-import": "^2.14.0",
+    "eslint-plugin-node": "^8.0.1",
+    "eslint-plugin-promise": "^4.0.1",
+    "eslint-plugin-standard": "^4.0.0"
   },
   "dependencies": {
     "await-to-js": "^2.1.1",
