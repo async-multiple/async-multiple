@@ -13,8 +13,13 @@ export default class Each extends Lib {
       stepBettwen: {
         type: [Array, Number],
         default: 0,
+        min: 0,
       },
-      stepTimeout: 12000,
+      stepTimeout: {
+        type: Number,
+        default: undefined,
+        min: 0,
+      },
       errorReplace: undefined,
       errorRetry: 0,
       maxCall: 1,
@@ -29,7 +34,7 @@ export default class Each extends Lib {
       const newObj = {}
       for (let key in item) {
         const value = item[key]
-        if (this.isType(value, {}) && !this.isType(value.default, undefined)) {
+        if (this.isType(value, {})) {
           if (!THIS.hasOwnProperty(key)) newObj[key] = this.isType(value.default, () => { }) ? value.default() : value.default
         } else {
           newObj[key] = value
@@ -60,10 +65,15 @@ export default class Each extends Lib {
       if (this.isType(param, undefined)) {
         continue
       }
-      if (this.isType(param, {}) && this.isType(param.type, [])) {
-        if (param.type.filter(item => item === this[name].constructor).length === 0) {
-          const types = param.type.map(item => item.name)
-          return this._errorManage(`${name} expect to a ${types} but get a ${this.whatType(this[name])}, please check!`)
+      if (this.isType(param, {})) {
+        if (param.hasOwnProperty('type') && !this.isType(this[name], undefined)) {
+          param.type = this.isType(param.type, []) ? param.type : [param.type]
+          if (param.type.filter(item => item === this[name].constructor).length === 0) {
+            const types = param.type.map(item => item.name)
+            return this._errorManage(`${name} expect to a ${types} but get a ${this.whatType(this[name])}, please check!`)
+          }
+        } else {
+          continue
         }
       } else if (!this.isType(param, this[name])) {
         return this._errorManage(`${name} expect to a ${this.whatType(param)} but get a ${this.whatType(this[name])}, please check!`)
@@ -160,6 +170,7 @@ export default class Each extends Lib {
     if (step > this.task.length - 1 || step < 0) return Promise.reject(this._errorManage('step overflow!'))
     if (this.handleStart) this.handleStart({ step, ...this.task[step], isRetry })
     let status = PENDING
+    let timer = null
     const succcesCallback = output => {
       if (status !== PENDING) return
       status = RESOLVE
@@ -176,9 +187,11 @@ export default class Each extends Lib {
       if (this.handleEnd) this.handleEnd(response)
       this.event.emit(this._actionName, response)
     }
-    const timer = setTimeout(() => {
-      errorCallback(this._makeError('timeout!'))
-    }, this.stepTimeout)
+    if (!this.isType(this.stepTimeout, undefined)) {
+      timer = setTimeout(() => {
+        errorCallback(this._makeError('timeout!'))
+      }, this.stepTimeout)
+    }
     this.makePromise(this.task[step].handle(step)).then(succcesCallback, errorCallback)
   }
 }
