@@ -212,6 +212,6 @@ export default class Each extends Lib {
         errorCallback(this._makeError('timeout!'))
       }, this.stepTimeout)
     }
-    this.makePromise(this.task[step].handle(step, this._cancelTask.bind(this))).then(succcesCallback, errorCallback)
+    this.makePromise(this.task[step].handle(this.task[step].input, step, this._cancelTask.bind(this))).then(succcesCallback, errorCallback)
   }
 }

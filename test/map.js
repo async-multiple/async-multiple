@@ -6,7 +6,7 @@ const sleep = time => {
 }
 map({
   task: [0, 1, 2, 3, 4],
-  handle: async (item, cancelTask) => {
+  handle: async (item, step, cancelTask) => {
     await sleep(1000)
     if (item === 3) cancelTask()
     return Promise.resolve(item * item)
