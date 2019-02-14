@@ -5,20 +5,22 @@ const sleep = time => {
   })
 }
 map({
-  task: [1, 2, 3],
-  handle: async item => {
-    await sleep(2000)
+  task: [0, 1, 2, 3, 4],
+  handle: async (item, cancelTask) => {
+    await sleep(1000)
+    if (item === 3) cancelTask()
     return Promise.resolve(item * item)
   },
   randomStep: false,
-  handleStart: ({ step, input, isRetry }) => {
+  handleStart: ({ step, input, isRetry, cancelTask }) => {
     console.log(`begin handle at step ${step}, input is ${input} ${isRetry ? '[RETRY]' : ''}`)
   },
   handleEnd: ({ step, input, output, error, isRetry }) => {
     console.log(`end handle at step ${step}, input is ${input}, output is ${output}, status: ${error ? 'error' : 'success'}`)
   },
-  stepBettwen: 1000,
+  stepBettwen: 10,
   stepTimeout: 3000,
+  // maxSuccessCount: 3,
 })
   .then(res => {
     console.log(res)

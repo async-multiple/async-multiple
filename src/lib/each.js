@@ -22,9 +22,13 @@ export default class Each extends Lib {
       },
       errorReplace: undefined,
       errorRetry: 0,
-      maxCall: 1,
+      maxSuccessCount: {
+        type: Number,
+        default: undefined,
+      },
     }
     this._formatType = 'each'
+    this.stopAtNextTrick = false
     this._actionName = this.randomString(8)
   }
 
@@ -135,6 +139,17 @@ export default class Each extends Lib {
     let taskCalledNum = 0
     const result = []
     const stepHandle = (step, resolveFn, isRetry) => {
+      // check if continue
+      if (this.stopAtNextTrick) {
+        resolveFn(result)
+        return
+      }
+      // chech if enough success result
+      if (this.maxSuccessCount && result.filter(item => !item.error).length >= this.maxSuccessCount) {
+        this._debug('Enough success result, task will stop!')
+        resolveFn(result)
+        return
+      }
       this.sleep(this._getStepBettwen()).then(() => {
         if (step < this.task.length) {
           this._callTaskHandle(step, isRetry)
@@ -166,16 +181,21 @@ export default class Each extends Lib {
     })
   }
 
+  _cancelTask() {
+    this._debug('Calling the cancelTask method, task will stop at next trick!')
+    this.stopAtNextTrick = true
+  }
+
   _callTaskHandle(step = 0, isRetry = false) {
     if (step > this.task.length - 1 || step < 0) return Promise.reject(this._errorManage('step overflow!'))
-    if (this.handleStart) this.handleStart({ step, ...this.task[step], isRetry })
+    if (this.handleStart) this.handleStart({ step, ...this.task[step], isRetry, cancelTask: this._cancelTask.bind(this) })
     let status = PENDING
     let timer = null
     const succcesCallback = output => {
       if (status !== PENDING) return
       status = RESOLVE
       if (timer) clearInterval(timer)
-      const response = { ...this.task[step], output, error: null, step, isRetry }
+      const response = { ...this.task[step], output, error: null, step, isRetry, cancelTask: this._cancelTask.bind(this) }
       if (this.handleEnd) this.handleEnd(response)
       this.event.emit(this._actionName, response)
     }
@@ -192,6 +212,6 @@ export default class Each extends Lib {
         errorCallback(this._makeError('timeout!'))
       }, this.stepTimeout)
     }
-    this.makePromise(this.task[step].handle(step)).then(succcesCallback, errorCallback)
+    this.makePromise(this.task[step].handle(step, this._cancelTask.bind(this))).then(succcesCallback, errorCallback)
   }
 }
