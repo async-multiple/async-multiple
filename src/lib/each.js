@@ -2,7 +2,7 @@ import Lib from './index'
 import _ from 'lodash'
 import { PENDING, RESOLVE, REJECT } from '../constants'
 export default class Each extends Lib {
-  constructor() {
+  constructor(...param) {
     super()
     this._defaultParams = {
       task: [],
@@ -28,8 +28,12 @@ export default class Each extends Lib {
       },
     }
     this._formatType = 'each'
-    this.stopAtNextTrick = false
+    this._stopAtNextTrick = false
     this._actionName = this.randomString(8)
+    // check params
+    this._checkParams(param)
+    // init task
+    this._initTask()
   }
 
   _assign(THIS, ...params) {
@@ -72,7 +76,7 @@ export default class Each extends Lib {
         if (this.isType(param[2], {})) {
           this.assign(this, param[2])
         } else {
-          return this._errorManage('option expect to a object, please check!')
+          throw this._errorManage('option expect to a object, please check!')
         }
       }
     }
@@ -86,23 +90,18 @@ export default class Each extends Lib {
           param.type = this.isType(param.type, []) ? param.type : [param.type]
           if (param.type.filter(item => item === this[name].constructor).length === 0) {
             const types = param.type.map(item => item.name)
-            return this._errorManage(`${name} expect to a ${types} but get a ${this.whatType(this[name])}, please check!`)
+            throw this._errorManage(`${name} expect to a ${types} but get a ${this.whatType(this[name])}, please check!`)
           }
         } else {
           continue
         }
       } else if (!this.isType(param, this[name])) {
-        return this._errorManage(`${name} expect to a ${this.whatType(param)} but get a ${this.whatType(this[name])}, please check!`)
+        throw this._errorManage(`${name} expect to a ${this.whatType(param)} but get a ${this.whatType(this[name])}, please check!`)
       }
     }
   }
 
-  init(param) {
-    // check params
-    const checkErr = this._checkParams(param)
-    if (checkErr) return Promise.reject(checkErr)
-    // init task
-    this._initTask()
+  start() {
     // handle result
     return this._beginTask().then(response => {
       const allArray = _.orderBy(response, 'order', 'asc')
@@ -152,7 +151,7 @@ export default class Each extends Lib {
     const result = []
     const stepHandle = (step, resolveFn, isRetry) => {
       // check if continue
-      if (this.stopAtNextTrick) {
+      if (this._stopAtNextTrick) {
         resolveFn(result)
         return
       }
@@ -193,21 +192,21 @@ export default class Each extends Lib {
     })
   }
 
-  _cancelTask() {
+  cancelTask() {
     this._debug('Calling the cancelTask method, task will stop at next trick!')
-    this.stopAtNextTrick = true
+    this._stopAtNextTrick = true
   }
 
   _callTaskHandle(step = 0, isRetry = false) {
     if (step > this.task.length - 1 || step < 0) return Promise.reject(this._errorManage('step overflow!'))
-    if (this.handleStart) this.handleStart({ step, ...this.task[step], isRetry, cancelTask: this._cancelTask.bind(this) })
+    if (this.handleStart) this.handleStart({ step, ...this.task[step], isRetry, cancelTask: this.cancelTask.bind(this) })
     let status = PENDING
     let timer = null
     const succcesCallback = output => {
       if (status !== PENDING) return
       status = RESOLVE
       if (timer) clearInterval(timer)
-      const response = { ...this.task[step], output, error: null, step, isRetry, cancelTask: this._cancelTask.bind(this) }
+      const response = { ...this.task[step], output, error: null, step, isRetry, cancelTask: this.cancelTask.bind(this) }
       if (this.handleEnd) this.handleEnd(response)
       this.event.emit(this._actionName, response)
     }
@@ -224,6 +223,6 @@ export default class Each extends Lib {
         errorCallback(this._makeError('timeout!'))
       }, this.stepTimeout)
     }
-    this.makePromise(this.task[step].handle(this.task[step].input, step, this._cancelTask.bind(this))).then(succcesCallback, errorCallback)
+    this.makePromise(this.task[step].handle(this.task[step].input, step, this.cancelTask.bind(this))).then(succcesCallback, errorCallback)
   }
 }

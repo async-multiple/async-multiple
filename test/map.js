@@ -1,14 +1,17 @@
-import { map } from '../src/index.js'
+import { Map } from '../src/index.js'
 const sleep = time => {
   return new Promise((resolve, reject) => {
     setTimeout(() => resolve(`[Sleep]: ${time}ms`), time)
   })
 }
-map({
+const map = new Map({
   task: [0, 1, 2, 3, 4],
   handle: async (item, step, cancelTask) => {
     await sleep(1000)
-    if (item === 3) cancelTask()
+    if (item === 2) {
+      console.log(2, 'cancel')
+      map.cancelTask()
+    }
     return Promise.resolve(item * item)
   },
   randomStep: false,
@@ -22,7 +25,9 @@ map({
   stepTimeout: 3000,
   // maxSuccessCount: 3,
 })
-  .then(res => {
+map
+.start()
+.then(res => {
     console.log(res)
   })
   .catch(err => {
