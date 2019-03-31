@@ -26,6 +26,14 @@ export default class Each extends Lib {
         type: Number,
         default: undefined,
       },
+      showProgress: {
+        type: Boolean,
+        default: false,
+      },
+      alias: {
+        type: String,
+        default: `TASK_${this.randomString(8)}`,
+      },
     }
     this._formatType = 'each'
     this._stopAtNextTrick = false
@@ -34,6 +42,8 @@ export default class Each extends Lib {
     this._checkParams(param)
     // init task
     this._initTask()
+    // init hooks
+    this._initHooks()
   }
 
   _assign(THIS, ...params) {
@@ -126,6 +136,19 @@ export default class Each extends Lib {
     this.task = this.randomStep ? this.shuffle(res) : res
   }
 
+  _initHooks() {
+    if (this.showProgress) {
+      const progress = ({ step, all, progress }) => {
+        console.log(`[ ${this.alias} ] all: ${all} complete: ${step + 1} progress: ${progress}`)
+      }
+      const oldHandleEnd = this.handleEnd
+      this.handleEnd = (...params) => {
+        oldHandleEnd.apply(this, params)
+        progress.apply(this, params)
+      }
+    }
+  }
+
   _getStepBettwen() {
     return this.isType(this.stepBettwen, []) ? _.random(...this.stepBettwen.slice(0, 2)) : this.stepBettwen
   }
@@ -199,14 +222,16 @@ export default class Each extends Lib {
 
   _callTaskHandle(step = 0, isRetry = false) {
     if (step > this.task.length - 1 || step < 0) return Promise.reject(this._errorManage('step overflow!'))
-    if (this.handleStart) this.handleStart({ step, ...this.task[step], isRetry, cancelTask: this.cancelTask.bind(this) })
     let status = PENDING
     let timer = null
+    let allStep = this.task.length
+    let progress = s => (100 * s / allStep).toFixed(2) + '%'
+    if (this.handleStart) this.handleStart({ step, all: allStep, progress: progress(step), ...this.task[step], isRetry, cancelTask: this.cancelTask.bind(this) })
     const succcesCallback = output => {
       if (status !== PENDING) return
       status = RESOLVE
       if (timer) clearInterval(timer)
-      const response = { ...this.task[step], output, error: null, step, isRetry, cancelTask: this.cancelTask.bind(this) }
+      const response = { ...this.task[step], all: allStep, progress: progress(step + 1), output, error: null, step, isRetry, cancelTask: this.cancelTask.bind(this) }
       if (this.handleEnd) this.handleEnd(response)
       this.event.emit(this._actionName, response)
     }
@@ -214,7 +239,7 @@ export default class Each extends Lib {
       if (status !== PENDING) return
       status = REJECT
       if (timer) clearInterval(timer)
-      const response = { ...this.task[step], output: this._getTaskOutput, error, step, isRetry }
+      const response = { ...this.task[step], all: allStep, progress: progress(step + 1), output: this._getTaskOutput, error, step, isRetry }
       if (this.handleEnd) this.handleEnd(response)
       this.event.emit(this._actionName, response)
     }

@@ -15,14 +15,15 @@ const map = new Map({
     return Promise.resolve(item * item)
   },
   randomStep: false,
-  handleStart: ({ step, input, isRetry, cancelTask }) => {
-    console.log(`begin handle at step ${step}, input is ${input} ${isRetry ? '[RETRY]' : ''}`)
-  },
-  handleEnd: ({ step, input, output, error, isRetry }) => {
-    console.log(`end handle at step ${step}, input is ${input}, output is ${output}, status: ${error ? 'error' : 'success'}`)
-  },
+  // handleStart: ({ step, input, isRetry, cancelTask }) => {
+  //   console.log(`begin handle at step ${step}, input is ${input} ${isRetry ? '[RETRY]' : ''}`)
+  // },
+  // handleEnd: ({ step, input, output, error, isRetry }) => {
+  //   console.log(`end handle at step ${step}, input is ${input}, output is ${output}, status: ${error ? 'error' : 'success'}`)
+  // },
   stepBettwen: 10,
   stepTimeout: 3000,
+  showProgress: true,
   // maxSuccessCount: 3,
 })
 map
