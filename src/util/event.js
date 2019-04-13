@@ -5,6 +5,7 @@ export default class Event extends Util {
     this._callbacks = {}
     this._isDebug = debug
   }
+
   on(name, callback, times) {
     if (!this.isType(name, '')) {
       this._errorManage('name expected a string!')
@@ -24,6 +25,7 @@ export default class Event extends Util {
       }
     )
   }
+
   emit(name, ...params) {
     if (!this.isType(name, '')) {
       this._errorManage('name expected a string!')
@@ -41,6 +43,7 @@ export default class Event extends Util {
       }
     })
   }
+
   remove(name) {
     if (!this.isType(name, '')) {
       this._errorManage('name expected a string!')
@@ -50,15 +53,18 @@ export default class Event extends Util {
     }
     delete this._callbacks[name]
   }
+
   once(name, ...params) {
     return this.on(name, params[0], 1)
   }
+
   _debug(message) {
     if (!this._isDebug) return
     if (!message) return
     if (!this.isType(message, '')) message = message.toString()
     console.log(`[event MESSAGE]: ${message}`)
   }
+  
   _errorManage(message = 'unexpected error!') {
     if (!this.isType(message, '')) message = message.toString()
     throw new Error(`[event ERROR]: ${message}`)

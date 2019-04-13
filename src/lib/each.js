@@ -46,6 +46,40 @@ export default class Each extends Lib {
     this._initHooks()
   }
 
+  start() {
+    // handle result
+    return this._beginTask().then(response => {
+      const allArray = _.orderBy(response, 'order', 'asc')
+      const allObject = {}
+      const outputArray = allArray.map(item => {
+        allObject[this._formatType === 'map' ? item.input : item.order] = item.output
+        return item.output
+      })
+      return Promise.resolve({
+        response,
+        allObject,
+        allArray,
+        outputArray,
+        toObject: () => {
+          return allObject
+        },
+        toArray: () => {
+          return allArray
+        },
+      })
+    })
+  }
+
+  cancelTask() {
+    this._debug('Calling the cancelTask method, task will stop at next trick!')
+    this._stopAtNextTrick = true
+  }
+
+  get _getTaskOutput() {
+    if (!this.isType(this.errorReplace, undefined)) return this.errorReplace
+    return null
+  }
+
   _assign(THIS, ...params) {
     params = params.map(item => {
       if (!this.isType(item, {})) return undefined
@@ -62,18 +96,6 @@ export default class Each extends Lib {
     })
     return this.assign(THIS, ...params)
   }
-
-  // _formatDefaultParams(params) {
-  //   for (let key in params) {
-  //     const value = params[key]
-  //     const constructor = value.constructor
-  //     if (this.isType(value, {})) {
-  //       if (Object.keys(value).length === 0) {
-  //         return this._errorManage(`${key} set error! expect to a ${types} but get a ${this.whatType(this[name])}, please check!`)
-  //       }
-  //     }
-  //   }
-  // }
 
   _checkParams(param) {
     this._assign(this, this._defaultParams)
@@ -111,23 +133,6 @@ export default class Each extends Lib {
     }
   }
 
-  start() {
-    // handle result
-    return this._beginTask().then(response => {
-      const allArray = _.orderBy(response, 'order', 'asc')
-      const allObject = {}
-      const outputArray = allArray.map(item => {
-        allObject[this._formatType === 'map' ? item.input : item.order] = item.output
-        return item.output
-      })
-      return Promise.resolve({
-        allObject,
-        allArray,
-        outputArray,
-      })
-    })
-  }
-
   _initTask() {
     const res = this.task.map((item, key) => ({
       order: key,
@@ -162,11 +167,6 @@ export default class Each extends Lib {
     if (err instanceof Error) return err
     if (err instanceof String) return new Error(err)
     return new Error(err.toString())
-  }
-
-  get _getTaskOutput() {
-    if (!this.isType(this.errorReplace, undefined)) return this.errorReplace
-    return null
   }
 
   _beginTask() {
@@ -213,11 +213,6 @@ export default class Each extends Lib {
         stepHandle(step + 1, resolve)
       })
     })
-  }
-
-  cancelTask() {
-    this._debug('Calling the cancelTask method, task will stop at next trick!')
-    this._stopAtNextTrick = true
   }
 
   _callTaskHandle(step = 0, isRetry = false) {
