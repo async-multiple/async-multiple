@@ -1,7 +1,6 @@
-var BundleAnalyzerPlugin = require('webpack-bundle-analyzer').BundleAnalyzerPlugin
 var path = require('path')
 module.exports = {
-  entry: './index.js',
+  entry: './src/index.js',
   output: {
     path: path.join(__dirname, '/dist'),
     filename: 'async-multiple.js',
@@ -23,9 +22,6 @@ module.exports = {
       },
     ],
   },
-  plugins: [
-    new BundleAnalyzerPlugin(),
-  ],
   node: {
     process: false,
   },

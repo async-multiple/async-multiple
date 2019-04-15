@@ -1,5 +1,5 @@
 import Each from './each'
-
+import { UNCALL } from '../constants'
 export default class Map extends Each {
   constructor(param) {
     super(param)
@@ -24,9 +24,11 @@ export default class Map extends Each {
         input: this.task[key],
         stepKey: key,
         handle: (...params) => this.handle(...params),
+        status: UNCALL,
       })
       order++
     }
+    if (task.length === 0) throw this._errorManage('task is empty!')
     this.task = this.randomStep ? this.shuffle(task) : task
   }
 }

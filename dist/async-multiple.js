@@ -88,6 +88,8 @@ var _extends = Object.assign || function (target) { for (var i = 1; i < argument
 
 var _createClass = function () { function defineProperties(target, props) { for (var i = 0; i < props.length; i++) { var descriptor = props[i]; descriptor.enumerable = descriptor.enumerable || false; descriptor.configurable = true; if ("value" in descriptor) descriptor.writable = true; Object.defineProperty(target, descriptor.key, descriptor); } } return function (Constructor, protoProps, staticProps) { if (protoProps) defineProperties(Constructor.prototype, protoProps); if (staticProps) defineProperties(Constructor, staticProps); return Constructor; }; }();
 
+var _get = function get(object, property, receiver) { if (object === null) object = Function.prototype; var desc = Object.getOwnPropertyDescriptor(object, property); if (desc === undefined) { var parent = Object.getPrototypeOf(object); if (parent === null) { return undefined; } else { return get(parent, property, receiver); } } else if ("value" in desc) { return desc.value; } else { var getter = desc.get; if (getter === undefined) { return undefined; } return getter.call(receiver); } };
+
 var _index = __webpack_require__(5);
 
 var _index2 = _interopRequireDefault(_index);
@@ -117,11 +119,20 @@ var Each = function (_Lib) {
     var _this = _possibleConstructorReturn(this, (Each.__proto__ || Object.getPrototypeOf(Each)).call(this));
 
     _this._defaultParams = {
-      task: [],
-      rejectOnError: false,
+      task: {
+        type: [Array, Object],
+        default: []
+      },
+      rejectOnError: {
+        type: Boolean,
+        default: false
+      },
       handleStart: function handleStart() {},
       handleEnd: function handleEnd() {},
-      randomStep: false,
+      randomStep: {
+        type: Boolean,
+        default: false
+      },
       stepBettwen: {
         type: [Array, Number],
         default: 0,
@@ -133,7 +144,11 @@ var Each = function (_Lib) {
         min: 0
       },
       errorReplace: undefined,
-      errorRetry: 0,
+      errorRetry: {
+        type: Number,
+        default: 0,
+        min: 0
+      },
       maxSuccessCount: {
         type: Number,
         default: undefined
@@ -145,6 +160,10 @@ var Each = function (_Lib) {
       alias: {
         type: String,
         default: 'TASK_' + _this.randomString(8)
+      },
+      debug: {
+        type: Boolean,
+        default: false
       }
     };
     _this._formatType = 'each';
@@ -274,13 +293,17 @@ var Each = function (_Lib) {
   }, {
     key: '_initTask',
     value: function _initTask() {
-      var res = this.task.map(function (item, key) {
-        return {
-          order: key,
-          handle: item
-        };
-      });
-      this.task = this.randomStep ? this.shuffle(res) : res;
+      var order = 0;
+      var task = [];
+      for (var key in this.task) {
+        task.push({
+          order: order,
+          stepKey: key,
+          handle: this.task[key]
+        });
+        order++;
+      }
+      this.task = this.randomStep ? this.shuffle(task) : task;
     }
   }, {
     key: '_initHooks',
@@ -382,6 +405,19 @@ var Each = function (_Lib) {
       });
     }
   }, {
+    key: '_debug',
+    value: function _debug() {
+      if (this.debug) {
+        var _get2;
+
+        for (var _len4 = arguments.length, params = Array(_len4), _key4 = 0; _key4 < _len4; _key4++) {
+          params[_key4] = arguments[_key4];
+        }
+
+        (_get2 = _get(Each.prototype.__proto__ || Object.getPrototypeOf(Each.prototype), '_debug', this)).call.apply(_get2, [this].concat(params));
+      }
+    }
+  }, {
     key: '_callTaskHandle',
     value: function _callTaskHandle() {
       var _this7 = this;
@@ -418,7 +454,7 @@ var Each = function (_Lib) {
           errorCallback(_this7._makeError('timeout!'));
         }, this.stepTimeout);
       }
-      this.makePromise(this.task[step].handle(this.task[step].input, step, this.cancelTask.bind(this))).then(succcesCallback, errorCallback);
+      this.makePromise(this.task[step].handle(this.task[step].input, step, this.cancelTask.bind(this), this.task[step].stepKey)).then(succcesCallback, errorCallback);
     }
   }, {
     key: '_getTaskOutput',
@@ -774,21 +810,34 @@ var Map = function (_Each) {
     return _this;
   }
 
+  // _initTask() {
+  //   const res = this.task.map((item, key) => ({
+  //     order: key,
+  //     input: item,
+  //     handle: (...params) => this.handle(...params),
+  //   }))
+  //   this.task = this.randomStep ? this.shuffle(res) : res
+  // }
+
   _createClass(Map, [{
     key: '_initTask',
     value: function _initTask() {
       var _this2 = this;
 
-      var res = this.task.map(function (item, key) {
-        return {
-          order: key,
-          input: item,
+      var order = 0;
+      var task = [];
+      for (var key in this.task) {
+        task.push({
+          order: order,
+          input: this.task[key],
+          stepKey: key,
           handle: function handle() {
             return _this2.handle.apply(_this2, arguments);
           }
-        };
-      });
-      this.task = this.randomStep ? this.shuffle(res) : res;
+        });
+        order++;
+      }
+      this.task = this.randomStep ? this.shuffle(task) : task;
     }
   }]);
 

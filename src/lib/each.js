@@ -1,6 +1,6 @@
 import Lib from './index'
-import orderBy from 'orderby-shiv'
-import { PENDING, RESOLVE, REJECT } from '../constants'
+import orderBy from 'orderby'
+import { PENDING, RESOLVE, REJECT, UNCALL, CALLING, CALLED } from '../constants'
 export default class Each extends Lib {
   constructor(...param) {
     super()
@@ -35,6 +35,11 @@ export default class Each extends Lib {
         default: 0,
         min: 0,
       },
+      maxCall: {
+        type: Number,
+        default: 1,
+        min: 0,
+      },
       maxSuccessCount: {
         type: Number,
         default: undefined,
@@ -53,6 +58,7 @@ export default class Each extends Lib {
       },
     }
     this._formatType = 'each'
+    this.taskStaus = UNCALL
     this._stopAtNextTrick = false
     this._actionName = this.randomString(8)
     // check params
@@ -65,8 +71,9 @@ export default class Each extends Lib {
 
   start() {
     // handle result
+    this.taskStaus = CALLING
     return this._beginTask().then(response => {
-      const allArray = orderBy(response, 'order', false)
+      const allArray = orderBy(response, ['order'])
       const allObject = {}
       const outputArray = allArray.map(item => {
         allObject[this._formatType === 'map' ? item.input : item.order] = item.output
@@ -158,16 +165,19 @@ export default class Each extends Lib {
         order,
         stepKey: key,
         handle: this.task[key],
+        status: UNCALL,
       })
       order++
     }
+    if (task.length === 0) throw this._errorManage('task is empty!')
     this.task = this.randomStep ? this.shuffle(task) : task
   }
 
   _initHooks() {
     if (this.showProgress) {
       const progress = ({ step, all, progress }) => {
-        console.log(`[ ${this.alias} ] all: ${all} complete: ${step + 1} progress: ${progress}`)
+        const completeStep = this.task.filter(s => s.status === CALLED).length
+        console.log(`[ ${this.alias} ] all: ${all} complete: ${completeStep + 1} progress: ${progress}`)
       }
       const oldHandleEnd = this.handleEnd
       this.handleEnd = (...params) => {
@@ -192,38 +202,49 @@ export default class Each extends Lib {
     return new Error(err.toString())
   }
 
-  _beginTask() {
-    let taskCalledNum = 0
-    const result = []
-    const stepHandle = (step, resolveFn, isRetry) => {
-      // check if continue
-      if (this._stopAtNextTrick) {
-        resolveFn(result)
-        return
-      }
-      // chech if enough success result
-      if (this.maxSuccessCount && result.filter(item => !item.error).length >= this.maxSuccessCount) {
-        this._debug('Enough success result, task will stop!')
-        resolveFn(result)
-        return
-      }
+  _createQueue() {
+    const unCalledTask = this.task.filter(s => s.status === UNCALL)
+    const callingTask = this.task.filter(s => s.status === CALLING)
+    const orderList = this.task.map(s => s.order)
+    const canCallCount = Math.min(this.maxCall - callingTask.length, unCalledTask.length)
+    if (canCallCount < 1) return
+    unCalledTask.slice(0, canCallCount).map(s => {
+      const step = orderList.indexOf(s.order)
+      this.task[step].status = CALLING
       this.sleep(this._getStepBettwen()).then(() => {
-        if (step < this.task.length) {
-          this._callTaskHandle(step, isRetry)
-        } else {
-          resolveFn(result)
-        }
+        this._callTaskHandle(step)
       })
-    }
-    this._callTaskHandle()
+    })
+  }
+
+  _beginTask() {
+    let singleTaskCalledNum = 0
+    const result = []
+    this._createQueue()
     return new Promise((resolve, reject) => {
       // bind action
       this.event.on(this._actionName, ({ error, output, step }) => {
+        if (this.taskStaus === CALLED) return
+        // check if continue
+        if (this._stopAtNextTrick) {
+          this.taskStaus = CALLED
+          resolve(result)
+          return
+        }
+        // chech if enough success result
+        if (this.maxSuccessCount && result.filter(item => !item.error).length >= this.maxSuccessCount) {
+          this._debug('Enough success result, task will stop!')
+          this.taskStaus = CALLED
+          resolve(result)
+          return
+        }
         if (error) {
           // if set errorRetry
-          if (this.errorRetry > taskCalledNum) {
-            taskCalledNum += 1
-            stepHandle(step, resolve, true)
+          if (this.errorRetry > singleTaskCalledNum) {
+            singleTaskCalledNum += 1
+            this.task[step].status = UNCALL
+            // reinit queue
+            this._createQueue()
             return
           }
           error = this._makeError(error)
@@ -231,9 +252,15 @@ export default class Each extends Lib {
             return reject(error)
           }
         }
-        taskCalledNum = 0
-        result.push(this.removeUndefined({ ...this.task[step], output, error, handle: undefined }))
-        stepHandle(step + 1, resolve)
+        singleTaskCalledNum = 0
+        this.task[step].status = CALLED
+        result.push(this.removeUndefined({ ...this.task[step], output, error, handle: undefined, status: undefined, stepKey: undefined }))
+        if (this.task.filter(s => s.status === CALLED).length !== this.task.length) {
+          this._createQueue()
+        } else {
+          this.taskStaus = CALLED
+          resolve(result)
+        }
       })
     })
   }
@@ -248,22 +275,25 @@ export default class Each extends Lib {
     if (step > this.task.length - 1 || step < 0) return Promise.reject(this._errorManage('step overflow!'))
     let status = PENDING
     let timer = null
-    let allStep = this.task.length
-    let progress = s => ((100 * s) / allStep).toFixed(2) + '%'
-    if (this.handleStart) this.handleStart({ step, all: allStep, progress: progress(step), ...this.task[step], isRetry, cancelTask: this.cancelTask.bind(this) })
+    const allStep = this.task.length
+    const completeStep = this.task.filter(s => s.status === CALLED).length
+    const progress = s => ((100 * s) / allStep).toFixed(2) + '%'
+    if (this.handleStart) this.handleStart({ step, all: allStep, progress: progress(completeStep), ...this.task[step], isRetry, cancelTask: this.cancelTask.bind(this) })
     const succcesCallback = output => {
+      if (this.taskStaus === CALLED) return
       if (status !== PENDING) return
       status = RESOLVE
       if (timer) clearInterval(timer)
-      const response = { ...this.task[step], all: allStep, progress: progress(step + 1), output, error: null, step, isRetry, cancelTask: this.cancelTask.bind(this) }
+      const response = { ...this.task[step], all: allStep, progress: progress(completeStep + 1), output, error: null, step, isRetry, cancelTask: this.cancelTask.bind(this) }
       if (this.handleEnd) this.handleEnd(response)
       this.event.emit(this._actionName, response)
     }
     const errorCallback = error => {
+      if (this.taskStaus === CALLED) return
       if (status !== PENDING) return
       status = REJECT
       if (timer) clearInterval(timer)
-      const response = { ...this.task[step], all: allStep, progress: progress(step + 1), output: this._getTaskOutput, error, step, isRetry }
+      const response = { ...this.task[step], all: allStep, progress: progress(completeStep + 1), output: this._getTaskOutput, error, step, isRetry }
       if (this.handleEnd) this.handleEnd(response)
       this.event.emit(this._actionName, response)
     }

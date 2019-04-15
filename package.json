@@ -1,6 +1,6 @@
 {
   "name": "async-multiple",
-  "version": "0.0.6",
+  "version": "0.0.9",
   "description": "a lite asynchronous queue runtime library!",
   "main": "./dist/async-multiple.js",
   "scripts": {
@@ -8,8 +8,9 @@
     "testEach": "babel-node test/each.js",
     "testEvent": "babel-node test/event.js",
     "lint": "eslint -c .eslintrc.js src --fix",
-    "build": "webpack --config webpack.config.prod.js --progress --colors --watch",
-    "buildDev": "webpack --config webpack.config.dev.js --progress --colors --watch"
+    "build": "webpack --config webpack.config.js",
+    "buildMin": "webpack --config webpack.config.min.js",
+    "release": "npm run build && npm run buildMin && npm publish"
   },
   "keywords": [
     "async-multiple",
@@ -48,6 +49,7 @@
   },
   "dependencies": {
     "await-to-js": "^2.1.1",
+    "orderby": "^1.1.0",
     "orderby-shiv": "^1.0.1"
   },
   "directories": {
