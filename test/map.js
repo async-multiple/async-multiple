@@ -41,9 +41,11 @@ map({
   handle: async (item) => {
     return Promise.resolve(item)
   },
+  stepBettwen: [100, 1000],
   showProgress: true,
-  alias: 'loop task'
+  alias: 'loop task',
+  randomStep: true,
 })
-.then(result => {
-  console.log(result.toArray())
-})
+  .then(result => {
+    console.log(result.toArray())
+  })

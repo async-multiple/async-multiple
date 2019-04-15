@@ -64,7 +64,6 @@ export default class Event extends Util {
     if (!this.isType(message, '')) message = message.toString()
     console.log(`[event MESSAGE]: ${message}`)
   }
-  
   _errorManage(message = 'unexpected error!') {
     if (!this.isType(message, '')) message = message.toString()
     throw new Error(`[event ERROR]: ${message}`)

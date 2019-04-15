@@ -59,4 +59,15 @@ export default class Util {
     while (s.length < L) s += randomchar()
     return s
   }
+
+  randomNumber(s, e, isPrase = true) {
+    if (!this.isType(s, e, 1)) {
+      throw new Error(`[randomNumber message]: obj expect a ${this.whatType(1)}`)
+    }
+    if (s > e) {
+      throw new Error(`[randomNumber message]: start number big than end!`)
+    }
+    const num = Math.random() * (e - s) + s
+    return isPrase ? parseInt(num) : num
+  }
 }

@@ -1,5 +1,5 @@
 import Lib from './index'
-import _ from 'lodash'
+import orderBy from 'orderby-shiv'
 import { PENDING, RESOLVE, REJECT } from '../constants'
 export default class Each extends Lib {
   constructor(...param) {
@@ -7,8 +7,8 @@ export default class Each extends Lib {
     this._defaultParams = {
       task: [],
       rejectOnError: false,
-      handleStart: () => { },
-      handleEnd: () => { },
+      handleStart: () => {},
+      handleEnd: () => {},
       randomStep: false,
       stepBettwen: {
         type: [Array, Number],
@@ -49,7 +49,7 @@ export default class Each extends Lib {
   start() {
     // handle result
     return this._beginTask().then(response => {
-      const allArray = _.orderBy(response, 'order', 'asc')
+      const allArray = orderBy(response, 'order', false)
       const allObject = {}
       const outputArray = allArray.map(item => {
         allObject[this._formatType === 'map' ? item.input : item.order] = item.output
@@ -87,7 +87,7 @@ export default class Each extends Lib {
       for (let key in item) {
         const value = item[key]
         if (this.isType(value, {})) {
-          if (!THIS.hasOwnProperty(key)) newObj[key] = this.isType(value.default, () => { }) ? value.default() : value.default
+          if (!THIS.hasOwnProperty(key)) newObj[key] = this.isType(value.default, () => {}) ? value.default() : value.default
         } else {
           newObj[key] = value
         }
@@ -155,7 +155,7 @@ export default class Each extends Lib {
   }
 
   _getStepBettwen() {
-    return this.isType(this.stepBettwen, []) ? _.random(...this.stepBettwen.slice(0, 2)) : this.stepBettwen
+    return this.isType(this.stepBettwen, []) ? this.randomNumber(...this.stepBettwen.slice(0, 2)) : this.stepBettwen
   }
 
   _errorManage(message = 'unexpected error!') {
@@ -220,7 +220,7 @@ export default class Each extends Lib {
     let status = PENDING
     let timer = null
     let allStep = this.task.length
-    let progress = s => (100 * s / allStep).toFixed(2) + '%'
+    let progress = s => ((100 * s) / allStep).toFixed(2) + '%'
     if (this.handleStart) this.handleStart({ step, all: allStep, progress: progress(step), ...this.task[step], isRetry, cancelTask: this.cancelTask.bind(this) })
     const succcesCallback = output => {
       if (status !== PENDING) return
