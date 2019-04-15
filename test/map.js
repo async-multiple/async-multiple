@@ -35,16 +35,24 @@
 //   })
 
 import { map } from '../src/index.js'
-const task = [1, 2, 3, 4, 5]
+// const task = [1, 2, 3, 4, 5]
 map({
-  task,
-  handle: async (item) => {
+  task: {
+    'a': 1,
+    'b': 2,
+    'c': 3,
+    'd': 4,
+  },
+  handle: async (item, step, cancelTask, stepKey) => {
+    // if (item === 3) cancelTask()
+    console.log(stepKey)
     return Promise.resolve(item)
   },
   stepBettwen: [100, 1000],
   showProgress: true,
   alias: 'loop task',
   randomStep: true,
+  debug: true,
 })
   .then(result => {
     console.log(result.toArray())

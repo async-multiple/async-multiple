@@ -5,11 +5,20 @@ export default class Each extends Lib {
   constructor(...param) {
     super()
     this._defaultParams = {
-      task: [],
-      rejectOnError: false,
+      task: {
+        type: [Array, Object],
+        default: [],
+      },
+      rejectOnError: {
+        type: Boolean,
+        default: false,
+      },
       handleStart: () => {},
       handleEnd: () => {},
-      randomStep: false,
+      randomStep: {
+        type: Boolean,
+        default: false,
+      },
       stepBettwen: {
         type: [Array, Number],
         default: 0,
@@ -21,7 +30,11 @@ export default class Each extends Lib {
         min: 0,
       },
       errorReplace: undefined,
-      errorRetry: 0,
+      errorRetry: {
+        type: Number,
+        default: 0,
+        min: 0,
+      },
       maxSuccessCount: {
         type: Number,
         default: undefined,
@@ -33,6 +46,10 @@ export default class Each extends Lib {
       alias: {
         type: String,
         default: `TASK_${this.randomString(8)}`,
+      },
+      debug: {
+        type: Boolean,
+        default: false,
       },
     }
     this._formatType = 'each'
@@ -134,11 +151,17 @@ export default class Each extends Lib {
   }
 
   _initTask() {
-    const res = this.task.map((item, key) => ({
-      order: key,
-      handle: item,
-    }))
-    this.task = this.randomStep ? this.shuffle(res) : res
+    let order = 0
+    const task = []
+    for (const key in this.task) {
+      task.push({
+        order,
+        stepKey: key,
+        handle: this.task[key],
+      })
+      order++
+    }
+    this.task = this.randomStep ? this.shuffle(task) : task
   }
 
   _initHooks() {
@@ -215,6 +238,12 @@ export default class Each extends Lib {
     })
   }
 
+  _debug(...params) {
+    if (this.debug) {
+      super._debug(...params)
+    }
+  }
+
   _callTaskHandle(step = 0, isRetry = false) {
     if (step > this.task.length - 1 || step < 0) return Promise.reject(this._errorManage('step overflow!'))
     let status = PENDING
@@ -243,6 +272,6 @@ export default class Each extends Lib {
         errorCallback(this._makeError('timeout!'))
       }, this.stepTimeout)
     }
-    this.makePromise(this.task[step].handle(this.task[step].input, step, this.cancelTask.bind(this))).then(succcesCallback, errorCallback)
+    this.makePromise(this.task[step].handle(this.task[step].input, step, this.cancelTask.bind(this), this.task[step].stepKey)).then(succcesCallback, errorCallback)
   }
 }
