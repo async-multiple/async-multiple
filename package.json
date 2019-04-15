@@ -8,9 +8,8 @@
     "testEach": "babel-node test/each.js",
     "testEvent": "babel-node test/event.js",
     "lint": "eslint -c .eslintrc.js src --fix",
-    "build": "webpack --config webpack.config.js",
-    "buildMin": "webpack --config webpack.config.min.js",
-    "release": "npm run build && npm run buildMin && npm publish"
+    "build": "webpack --config webpack.config.js && webpack --config webpack.config.min.js",
+    "release": "npm run build && npm publish"
   },
   "keywords": [
     "async-multiple",

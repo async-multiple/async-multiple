@@ -70,7 +70,7 @@ return /******/ (function(modules) { // webpackBootstrap
 /******/ 	__webpack_require__.p = "";
 /******/
 /******/ 	// Load entry module and return exports
-/******/ 	return __webpack_require__(__webpack_require__.s = 3);
+/******/ 	return __webpack_require__(__webpack_require__.s = 4);
 /******/ })
 /************************************************************************/
 /******/ ([
@@ -90,15 +90,15 @@ var _createClass = function () { function defineProperties(target, props) { for 
 
 var _get = function get(object, property, receiver) { if (object === null) object = Function.prototype; var desc = Object.getOwnPropertyDescriptor(object, property); if (desc === undefined) { var parent = Object.getPrototypeOf(object); if (parent === null) { return undefined; } else { return get(parent, property, receiver); } } else if ("value" in desc) { return desc.value; } else { var getter = desc.get; if (getter === undefined) { return undefined; } return getter.call(receiver); } };
 
-var _index = __webpack_require__(5);
+var _index = __webpack_require__(6);
 
 var _index2 = _interopRequireDefault(_index);
 
-var _orderbyShiv = __webpack_require__(6);
+var _orderby = __webpack_require__(7);
 
-var _orderbyShiv2 = _interopRequireDefault(_orderbyShiv);
+var _orderby2 = _interopRequireDefault(_orderby);
 
-var _constants = __webpack_require__(7);
+var _constants = __webpack_require__(3);
 
 function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
 
@@ -149,6 +149,11 @@ var Each = function (_Lib) {
         default: 0,
         min: 0
       },
+      maxCall: {
+        type: Number,
+        default: 1,
+        min: 0
+      },
       maxSuccessCount: {
         type: Number,
         default: undefined
@@ -167,6 +172,7 @@ var Each = function (_Lib) {
       }
     };
     _this._formatType = 'each';
+    _this.taskStaus = _constants.UNCALL;
     _this._stopAtNextTrick = false;
     _this._actionName = _this.randomString(8);
     // check params
@@ -189,8 +195,9 @@ var Each = function (_Lib) {
       var _this2 = this;
 
       // handle result
+      this.taskStaus = _constants.CALLING;
       return this._beginTask().then(function (response) {
-        var allArray = (0, _orderbyShiv2.default)(response, 'order', false);
+        var allArray = (0, _orderby2.default)(response, ['order']);
         var allObject = {};
         var outputArray = allArray.map(function (item) {
           allObject[_this2._formatType === 'map' ? item.input : item.order] = item.output;
@@ -299,10 +306,12 @@ var Each = function (_Lib) {
         task.push({
           order: order,
           stepKey: key,
-          handle: this.task[key]
+          handle: this.task[key],
+          status: _constants.UNCALL
         });
         order++;
       }
+      if (task.length === 0) throw this._errorManage('task is empty!');
       this.task = this.randomStep ? this.shuffle(task) : task;
     }
   }, {
@@ -316,7 +325,10 @@ var Each = function (_Lib) {
               all = _ref.all,
               progress = _ref.progress;
 
-          console.log('[ ' + _this5.alias + ' ] all: ' + all + ' complete: ' + (step + 1) + ' progress: ' + progress);
+          var completeStep = _this5.task.filter(function (s) {
+            return s.status === _constants.CALLED;
+          }).length;
+          console.log('[ ' + _this5.alias + ' ] all: ' + all + ' complete: ' + (completeStep + 1) + ' progress: ' + progress);
         };
         var oldHandleEnd = this.handleEnd;
         this.handleEnd = function () {
@@ -350,57 +362,85 @@ var Each = function (_Lib) {
       return new Error(err.toString());
     }
   }, {
-    key: '_beginTask',
-    value: function _beginTask() {
+    key: '_createQueue',
+    value: function _createQueue() {
       var _this6 = this;
 
-      var taskCalledNum = 0;
-      var result = [];
-      var stepHandle = function stepHandle(step, resolveFn, isRetry) {
-        // check if continue
-        if (_this6._stopAtNextTrick) {
-          resolveFn(result);
-          return;
-        }
-        // chech if enough success result
-        if (_this6.maxSuccessCount && result.filter(function (item) {
-          return !item.error;
-        }).length >= _this6.maxSuccessCount) {
-          _this6._debug('Enough success result, task will stop!');
-          resolveFn(result);
-          return;
-        }
+      var unCalledTask = this.task.filter(function (s) {
+        return s.status === _constants.UNCALL;
+      });
+      var callingTask = this.task.filter(function (s) {
+        return s.status === _constants.CALLING;
+      });
+      var orderList = this.task.map(function (s) {
+        return s.order;
+      });
+      var canCallCount = Math.min(this.maxCall - callingTask.length, unCalledTask.length);
+      if (canCallCount < 1) return;
+      unCalledTask.slice(0, canCallCount).map(function (s) {
+        var step = orderList.indexOf(s.order);
+        _this6.task[step].status = _constants.CALLING;
         _this6.sleep(_this6._getStepBettwen()).then(function () {
-          if (step < _this6.task.length) {
-            _this6._callTaskHandle(step, isRetry);
-          } else {
-            resolveFn(result);
-          }
+          _this6._callTaskHandle(step);
         });
-      };
-      this._callTaskHandle();
+      });
+    }
+  }, {
+    key: '_beginTask',
+    value: function _beginTask() {
+      var _this7 = this;
+
+      var singleTaskCalledNum = 0;
+      var result = [];
+      this._createQueue();
       return new Promise(function (resolve, reject) {
         // bind action
-        _this6.event.on(_this6._actionName, function (_ref2) {
+        _this7.event.on(_this7._actionName, function (_ref2) {
           var error = _ref2.error,
               output = _ref2.output,
               step = _ref2.step;
 
+          if (_this7.taskStaus === _constants.CALLED) return;
+          // check if continue
+          if (_this7._stopAtNextTrick) {
+            _this7.taskStaus = _constants.CALLED;
+            resolve(result);
+            return;
+          }
+          // chech if enough success result
+          if (_this7.maxSuccessCount && result.filter(function (item) {
+            return !item.error;
+          }).length >= _this7.maxSuccessCount) {
+            _this7._debug('Enough success result, task will stop!');
+            _this7.taskStaus = _constants.CALLED;
+            resolve(result);
+            return;
+          }
           if (error) {
             // if set errorRetry
-            if (_this6.errorRetry > taskCalledNum) {
-              taskCalledNum += 1;
-              stepHandle(step, resolve, true);
+            if (_this7.errorRetry > singleTaskCalledNum) {
+              singleTaskCalledNum += 1;
+              _this7.task[step].status = _constants.UNCALL;
+              // reinit queue
+              _this7._createQueue();
               return;
             }
-            error = _this6._makeError(error);
-            if (_this6.rejectOnError) {
+            error = _this7._makeError(error);
+            if (_this7.rejectOnError) {
               return reject(error);
             }
           }
-          taskCalledNum = 0;
-          result.push(_this6.removeUndefined(_extends({}, _this6.task[step], { output: output, error: error, handle: undefined })));
-          stepHandle(step + 1, resolve);
+          singleTaskCalledNum = 0;
+          _this7.task[step].status = _constants.CALLED;
+          result.push(_this7.removeUndefined(_extends({}, _this7.task[step], { output: output, error: error, handle: undefined, status: undefined, stepKey: undefined })));
+          if (_this7.task.filter(function (s) {
+            return s.status === _constants.CALLED;
+          }).length !== _this7.task.length) {
+            _this7._createQueue();
+          } else {
+            _this7.taskStaus = _constants.CALLED;
+            resolve(result);
+          }
         });
       });
     }
@@ -420,7 +460,7 @@ var Each = function (_Lib) {
   }, {
     key: '_callTaskHandle',
     value: function _callTaskHandle() {
-      var _this7 = this;
+      var _this8 = this;
 
       var step = arguments.length > 0 && arguments[0] !== undefined ? arguments[0] : 0;
       var isRetry = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : false;
@@ -429,29 +469,34 @@ var Each = function (_Lib) {
       var status = _constants.PENDING;
       var timer = null;
       var allStep = this.task.length;
+      var completeStep = this.task.filter(function (s) {
+        return s.status === _constants.CALLED;
+      }).length;
       var progress = function progress(s) {
         return (100 * s / allStep).toFixed(2) + '%';
       };
-      if (this.handleStart) this.handleStart(_extends({ step: step, all: allStep, progress: progress(step) }, this.task[step], { isRetry: isRetry, cancelTask: this.cancelTask.bind(this) }));
+      if (this.handleStart) this.handleStart(_extends({ step: step, all: allStep, progress: progress(completeStep) }, this.task[step], { isRetry: isRetry, cancelTask: this.cancelTask.bind(this) }));
       var succcesCallback = function succcesCallback(output) {
+        if (_this8.taskStaus === _constants.CALLED) return;
         if (status !== _constants.PENDING) return;
         status = _constants.RESOLVE;
         if (timer) clearInterval(timer);
-        var response = _extends({}, _this7.task[step], { all: allStep, progress: progress(step + 1), output: output, error: null, step: step, isRetry: isRetry, cancelTask: _this7.cancelTask.bind(_this7) });
-        if (_this7.handleEnd) _this7.handleEnd(response);
-        _this7.event.emit(_this7._actionName, response);
+        var response = _extends({}, _this8.task[step], { all: allStep, progress: progress(completeStep + 1), output: output, error: null, step: step, isRetry: isRetry, cancelTask: _this8.cancelTask.bind(_this8) });
+        if (_this8.handleEnd) _this8.handleEnd(response);
+        _this8.event.emit(_this8._actionName, response);
       };
       var errorCallback = function errorCallback(error) {
+        if (_this8.taskStaus === _constants.CALLED) return;
         if (status !== _constants.PENDING) return;
         status = _constants.REJECT;
         if (timer) clearInterval(timer);
-        var response = _extends({}, _this7.task[step], { all: allStep, progress: progress(step + 1), output: _this7._getTaskOutput, error: error, step: step, isRetry: isRetry });
-        if (_this7.handleEnd) _this7.handleEnd(response);
-        _this7.event.emit(_this7._actionName, response);
+        var response = _extends({}, _this8.task[step], { all: allStep, progress: progress(completeStep + 1), output: _this8._getTaskOutput, error: error, step: step, isRetry: isRetry });
+        if (_this8.handleEnd) _this8.handleEnd(response);
+        _this8.event.emit(_this8._actionName, response);
       };
       if (!this.isType(this.stepTimeout, undefined)) {
         timer = setTimeout(function () {
-          errorCallback(_this7._makeError('timeout!'));
+          errorCallback(_this8._makeError('timeout!'));
         }, this.stepTimeout);
       }
       this.makePromise(this.task[step].handle(this.task[step].input, step, this.cancelTask.bind(this), this.task[step].stepKey)).then(succcesCallback, errorCallback);
@@ -739,9 +784,26 @@ exports.default = Event;
 Object.defineProperty(exports, "__esModule", {
   value: true
 });
+var PENDING = exports.PENDING = 'PENDING';
+var RESOLVE = exports.RESOLVE = 'RESOLVE';
+var REJECT = exports.REJECT = 'REJECT';
+var UNCALL = exports.UNCALL = 'UNCALL';
+var CALLING = exports.CALLING = 'CALLING';
+var CALLED = exports.CALLED = 'CALLED';
+
+/***/ }),
+/* 4 */
+/***/ (function(module, exports, __webpack_require__) {
+
+"use strict";
+
+
+Object.defineProperty(exports, "__esModule", {
+  value: true
+});
 exports.Event = exports.Each = exports.Map = exports.each = exports.map = undefined;
 
-var _map = __webpack_require__(4);
+var _map = __webpack_require__(5);
 
 var _map2 = _interopRequireDefault(_map);
 
@@ -774,7 +836,7 @@ exports.Each = _each2.default;
 exports.Event = _event2.default;
 
 /***/ }),
-/* 4 */
+/* 5 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
@@ -789,6 +851,8 @@ var _createClass = function () { function defineProperties(target, props) { for 
 var _each = __webpack_require__(0);
 
 var _each2 = _interopRequireDefault(_each);
+
+var _constants = __webpack_require__(3);
 
 function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
 
@@ -833,10 +897,12 @@ var Map = function (_Each) {
           stepKey: key,
           handle: function handle() {
             return _this2.handle.apply(_this2, arguments);
-          }
+          },
+          status: _constants.UNCALL
         });
         order++;
       }
+      if (task.length === 0) throw this._errorManage('task is empty!');
       this.task = this.randomStep ? this.shuffle(task) : task;
     }
   }]);
@@ -847,7 +913,7 @@ var Map = function (_Each) {
 exports.default = Map;
 
 /***/ }),
-/* 5 */
+/* 6 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
@@ -910,79 +976,87 @@ var Lib = function (_Util) {
 exports.default = Lib;
 
 /***/ }),
-/* 6 */
-/***/ (function(module, exports, __webpack_require__) {
-
-"use strict";
-
-
-(function (definition) {
-  if (true) {
-    module.exports = definition();
-  }
-  else {
-    window.orderBy = definition();
-  }
-})(
-function () {
-  return function orderBy (target, by, decend) {
-    // If `target` is not an target, throw type error.
-    var type = Object.prototype.toString.call(target);
-    if (type !== '[object Array]') {
-      throw new TypeError('orderBy only takes array parameter. Found: ' + type);
-    }
-
-    // If `by` is not defined properly, throw type error.
-    if (typeof by !== 'string') {
-      throw new TypeError('orderBy expects to take a string parameter. Found: '
-                          + typeof by);
-    }
-
-    decend = typeof decend === 'boolean' ? decend : false;
-
-    // First, create a `by` mapping list.
-    // Format: {byValue: originalIndex, ...}
-    var mapping = {};
-    var temp = [];
-    target.forEach(function (item, index) {
-      var byValue = item[by];
-      mapping[item[by]] = index;
-
-      // Push curent item to `temp`.
-      temp.push(byValue);
-    });
-
-    // Now, sort `temp`.
-    temp.sort();
-    // If need `decend`, reverse `temp`.
-    if (decend) {
-      temp.reverse();
-    }
-
-    // Now, map `temp` back to original `target`.
-    var result = [];
-    temp.forEach(function (value) { // `value` refers to `byValue` in `mapping`.
-      result.push(target[mapping[value]]);
-    });
-
-    return result;
-  };
-});
-
-
-/***/ }),
 /* 7 */
-/***/ (function(module, exports, __webpack_require__) {
+/***/ (function(module, exports) {
 
-"use strict";
+// Generated by CoffeeScript 1.9.2
+var compareProperty, dot;
 
+module.exports = function(collection, expressions) {
+  return collection.sort(function(a, b) {
+    var expression, i, len, predicate, reverse, value;
+    for (i = 0, len = expressions.length; i < len; i++) {
+      expression = expressions[i];
+      if (typeof expression === 'object') {
+        predicate = expression.predicate;
+        reverse = expression.reverse;
+      } else {
+        predicate = expression;
+      }
+      value = compareProperty(predicate, reverse)(a, b);
+      if (value !== 0) {
+        return value;
+      }
+    }
+  });
+};
 
-Object.defineProperty(exports, "__esModule", {
-  value: true
-});
-var PENDING = exports.PENDING = 'PENDING';
-var RESOLVE = exports.RESOLVE = 'RESOLVE';
-var REJECT = exports.REJECT = 'REJECT';
+dot = {
+  get: function(obj, field) {
+    var i, key, keys, len, value;
+    keys = field.split('.');
+    value = obj;
+    for (i = 0, len = keys.length; i < len; i++) {
+      key = keys[i];
+      value = value[key];
+    }
+    return value;
+  },
+  set: function(obj, field, setValue) {
+    var allButLastKey, i, key, keys, lastKey, len, value;
+    keys = field.split('.');
+    allButLastKey = keys.slice(0, -1);
+    lastKey = keys[keys.length - 1];
+    value = obj;
+    for (i = 0, len = allButLastKey.length; i < len; i++) {
+      key = allButLastKey[i];
+      value = value[key] != null ? value[key] : value[key] = {};
+    }
+    return value[lastKey] = setValue;
+  }
+};
+
+compareProperty = function(predicate, reverse) {
+  var getter;
+  getter = typeof predicate === 'function' ? function(obj) {
+    return predicate(obj);
+  } : function(obj) {
+    return dot.get(obj, predicate);
+  };
+  getter;
+  if (!reverse) {
+    return function(a, b) {
+      if (getter(a) < getter(b)) {
+        return -1;
+      } else if (getter(a) > getter(b)) {
+        return 1;
+      } else {
+        return 0;
+      }
+    };
+  } else {
+    return function(a, b) {
+      if (getter(a) > getter(b)) {
+        return -1;
+      } else if (getter(a) < getter(b)) {
+        return 1;
+      } else {
+        return 0;
+      }
+    };
+  }
+};
+
 
 /***/ })
 /******/ ]);
