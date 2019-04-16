@@ -1,6 +1,6 @@
 {
   "name": "async-multiple",
-  "version": "0.0.9",
+  "version": "0.1.0",
   "description": "a lite asynchronous queue runtime library!",
   "main": "./dist/async-multiple.js",
   "scripts": {
