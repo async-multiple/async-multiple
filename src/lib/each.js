@@ -58,7 +58,7 @@ export default class Each extends Lib {
       },
     }
     this._formatType = 'each'
-    this.taskStaus = UNCALL
+    this.taskStatus = UNCALL
     this._stopAtNextTrick = false
     this._actionName = this.randomString(8)
     // check params
@@ -71,7 +71,7 @@ export default class Each extends Lib {
 
   start() {
     // handle result
-    this.taskStaus = CALLING
+    this.taskStatus = CALLING
     return this._beginTask().then(response => {
       const allArray = orderBy(response, ['order'])
       const allObject = {}
@@ -224,17 +224,17 @@ export default class Each extends Lib {
     return new Promise((resolve, reject) => {
       // bind action
       this.event.on(this._actionName, ({ error, output, step }) => {
-        if (this.taskStaus === CALLED) return
+        if (this.taskStatus === CALLED) return
         // check if continue
         if (this._stopAtNextTrick) {
-          this.taskStaus = CALLED
+          this.taskStatus = CALLED
           resolve(result)
           return
         }
         // chech if enough success result
         if (this.maxSuccessCount && result.filter(item => !item.error).length >= this.maxSuccessCount) {
           this._debug('Enough success result, task will stop!')
-          this.taskStaus = CALLED
+          this.taskStatus = CALLED
           resolve(result)
           return
         }
@@ -258,7 +258,7 @@ export default class Each extends Lib {
         if (this.task.filter(s => s.status === CALLED).length !== this.task.length) {
           this._createQueue()
         } else {
-          this.taskStaus = CALLED
+          this.taskStatus = CALLED
           resolve(result)
         }
       })
@@ -280,7 +280,7 @@ export default class Each extends Lib {
     const progress = s => ((100 * s) / allStep).toFixed(2) + '%'
     if (this.handleStart) this.handleStart({ step, all: allStep, progress: progress(completeStep), ...this.task[step], isRetry, cancelTask: this.cancelTask.bind(this) })
     const succcesCallback = output => {
-      if (this.taskStaus === CALLED) return
+      if (this.taskStatus === CALLED) return
       if (status !== PENDING) return
       status = RESOLVE
       if (timer) clearInterval(timer)
@@ -289,7 +289,7 @@ export default class Each extends Lib {
       this.event.emit(this._actionName, response)
     }
     const errorCallback = error => {
-      if (this.taskStaus === CALLED) return
+      if (this.taskStatus === CALLED) return
       if (status !== PENDING) return
       status = REJECT
       if (timer) clearInterval(timer)
@@ -302,6 +302,7 @@ export default class Each extends Lib {
         errorCallback(this._makeError('timeout!'))
       }, this.stepTimeout)
     }
-    this.makePromise(this.task[step].handle(this.task[step].input, step, this.cancelTask.bind(this), this.task[step].stepKey)).then(succcesCallback, errorCallback)
+    const res = this.task[step].handle(this.task[step].input, step, this.cancelTask.bind(this), this.task[step].stepKey)
+    if (res !== undefined) this.makePromise(res).then(succcesCallback, errorCallback)
   }
 }

@@ -16,11 +16,17 @@ export default class Util {
   }
 
   isPromise(fn) {
-    return !!(fn.then && this.isType(fn, fn.then, () => { }))
+    return this.whatType(fn) === '[object Promise]' || !!(fn.then && this.isType(fn, fn.then, () => { }))
   }
 
-  makePromise(obj) {
-    return this.isPromise(obj) ? obj : Promise.resolve(obj)
+  async makePromise(obj) {
+    if (this.isPromise(obj)) {
+      const res = await obj
+      if (res !== undefined) return obj
+      return new Promise(() => {})
+    }
+    if (obj instanceof Error) return Promise.reject(obj)
+    return Promise.resolve(obj)
   }
 
   arrayToObject(list) {
@@ -29,6 +35,15 @@ export default class Util {
     list.map((item, key) => {
       obj[key] = item
     })
+    return obj
+  }
+
+  objectToArray(obj) {
+    if (!this.isType(obj, {})) throw new Error('[objectToArray error]: expect a object!')
+    const list = []
+    for (const i in obj) {
+      list.push(obj[i])
+    }
     return obj
   }
 
