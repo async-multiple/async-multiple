@@ -28,7 +28,6 @@ export default class Map extends Each {
       })
       order++
     }
-    if (task.length === 0) throw this._errorManage('task is empty!')
     this.task = this.randomStep ? this.shuffle(task) : task
   }
 }

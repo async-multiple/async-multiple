@@ -1,6 +1,6 @@
 {
   "name": "async-multiple",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "description": "a lite asynchronous queue runtime library!",
   "main": "./dist/async-multiple.js",
   "scripts": {
@@ -48,8 +48,7 @@
   },
   "dependencies": {
     "await-to-js": "^2.1.1",
-    "orderby": "^1.1.0",
-    "orderby-shiv": "^1.0.1"
+    "orderby": "^1.1.0"
   },
   "directories": {
     "test": "test"

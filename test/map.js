@@ -1,10 +1,10 @@
 import { Map } from '../src/index.js'
 const hander = new Map({
-  task: [1, 2, 3, 4, 5, 6, 7, 8, 9, 10],
+  task: [],
   handle: async (item, step, cancelTask, stepKey) => {
     console.log(item)
     // if (item === 3) cancelTask()
-    return undefined
+    return item
   },
   stepBettwen: [100, 300],
   maxCall: 1,

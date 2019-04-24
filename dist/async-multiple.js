@@ -311,7 +311,6 @@ var Each = function (_Lib) {
         });
         order++;
       }
-      if (task.length === 0) throw this._errorManage('task is empty!');
       this.task = this.randomStep ? this.shuffle(task) : task;
     }
   }, {
@@ -392,6 +391,7 @@ var Each = function (_Lib) {
 
       var singleTaskCalledNum = 0;
       var result = [];
+      if (this.task.length === 0) return Promise.resolve([]);
       this._createQueue();
       return new Promise(function (resolve, reject) {
         // bind action
@@ -971,7 +971,6 @@ var Map = function (_Each) {
         });
         order++;
       }
-      if (task.length === 0) throw this._errorManage('task is empty!');
       this.task = this.randomStep ? this.shuffle(task) : task;
     }
   }]);

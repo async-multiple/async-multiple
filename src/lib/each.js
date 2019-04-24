@@ -169,7 +169,6 @@ export default class Each extends Lib {
       })
       order++
     }
-    if (task.length === 0) throw this._errorManage('task is empty!')
     this.task = this.randomStep ? this.shuffle(task) : task
   }
 
@@ -220,6 +219,7 @@ export default class Each extends Lib {
   _beginTask() {
     let singleTaskCalledNum = 0
     const result = []
+    if (this.task.length === 0) return Promise.resolve([])
     this._createQueue()
     return new Promise((resolve, reject) => {
       // bind action
