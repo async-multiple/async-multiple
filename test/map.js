@@ -1,12 +1,12 @@
 import { Map } from '../src/index.js'
 const hander = new Map({
-  task: [],
+  task: [1, 2, 3, 4, 5, 6],
   handle: async (item, step, cancelTask, stepKey) => {
     console.log(item)
     // if (item === 3) cancelTask()
     return item
   },
-  stepBettwen: [100, 300],
+  stepBettwen: 1000,
   maxCall: 1,
   showProgress: true,
   alias: 'loop task',
@@ -19,6 +19,8 @@ hander.start().then(
   }
 )
 
-// setInterval(() => {
-//   console.log(hander.taskStatus)
-// }, 1000)
+setTimeout(() => {
+  hander.cancelTask().then(() => {
+    console.log('stop')
+  })
+}, 3000)

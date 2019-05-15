@@ -220,25 +220,30 @@ var Each = function (_Lib) {
   }, {
     key: 'cancelTask',
     value: function cancelTask() {
+      var _this3 = this;
+
       this._debug('Calling the cancelTask method, task will stop at next trick!');
       this._stopAtNextTrick = true;
+      return new Promise(function (resolve, reject) {
+        _this3.event.on('TASKSTOPED', resolve());
+      });
     }
   }, {
     key: '_assign',
     value: function _assign(THIS) {
-      var _this3 = this;
+      var _this4 = this;
 
       for (var _len2 = arguments.length, params = Array(_len2 > 1 ? _len2 - 1 : 0), _key2 = 1; _key2 < _len2; _key2++) {
         params[_key2 - 1] = arguments[_key2];
       }
 
       params = params.map(function (item) {
-        if (!_this3.isType(item, {})) return undefined;
+        if (!_this4.isType(item, {})) return undefined;
         var newObj = {};
         for (var key in item) {
           var value = item[key];
-          if (_this3.isType(value, {})) {
-            if (!THIS.hasOwnProperty(key)) newObj[key] = _this3.isType(value.default, function () {}) ? value.default() : value.default;
+          if (_this4.isType(value, {})) {
+            if (!THIS.hasOwnProperty(key)) newObj[key] = _this4.isType(value.default, function () {}) ? value.default() : value.default;
           } else {
             newObj[key] = value;
           }
@@ -250,7 +255,7 @@ var Each = function (_Lib) {
   }, {
     key: '_checkParams',
     value: function _checkParams(param) {
-      var _this4 = this;
+      var _this5 = this;
 
       this._assign(this, this._defaultParams);
       if (this.isType(param[0], {})) {
@@ -268,26 +273,26 @@ var Each = function (_Lib) {
       }
 
       var _loop = function _loop(name) {
-        var param = _this4._defaultParams[name];
-        if (_this4.isType(param, undefined)) {
+        var param = _this5._defaultParams[name];
+        if (_this5.isType(param, undefined)) {
           return 'continue';
         }
-        if (_this4.isType(param, {})) {
-          if (param.hasOwnProperty('type') && !_this4.isType(_this4[name], undefined)) {
-            param.type = _this4.isType(param.type, []) ? param.type : [param.type];
+        if (_this5.isType(param, {})) {
+          if (param.hasOwnProperty('type') && !_this5.isType(_this5[name], undefined)) {
+            param.type = _this5.isType(param.type, []) ? param.type : [param.type];
             if (param.type.filter(function (item) {
-              return item === _this4[name].constructor;
+              return item === _this5[name].constructor;
             }).length === 0) {
               var types = param.type.map(function (item) {
                 return item.name;
               });
-              throw _this4._errorManage(name + ' expect to a ' + types + ' but get a ' + _this4.whatType(_this4[name]) + ', please check!');
+              throw _this5._errorManage(name + ' expect to a ' + types + ' but get a ' + _this5.whatType(_this5[name]) + ', please check!');
             }
           } else {
             return 'continue';
           }
-        } else if (!_this4.isType(param, _this4[name])) {
-          throw _this4._errorManage(name + ' expect to a ' + _this4.whatType(param) + ' but get a ' + _this4.whatType(_this4[name]) + ', please check!');
+        } else if (!_this5.isType(param, _this5[name])) {
+          throw _this5._errorManage(name + ' expect to a ' + _this5.whatType(param) + ' but get a ' + _this5.whatType(_this5[name]) + ', please check!');
         }
       };
 
@@ -316,7 +321,7 @@ var Each = function (_Lib) {
   }, {
     key: '_initHooks',
     value: function _initHooks() {
-      var _this5 = this;
+      var _this6 = this;
 
       if (this.showProgress) {
         var progress = function progress(_ref) {
@@ -324,10 +329,10 @@ var Each = function (_Lib) {
               all = _ref.all,
               progress = _ref.progress;
 
-          var completeStep = _this5.task.filter(function (s) {
+          var completeStep = _this6.task.filter(function (s) {
             return s.status === _constants.CALLED;
           }).length;
-          console.log('[ ' + _this5.alias + ' ] all: ' + all + ' complete: ' + (completeStep + 1) + ' progress: ' + progress);
+          console.log('[ ' + _this6.alias + ' ] all: ' + all + ' complete: ' + (completeStep + 1) + ' progress: ' + progress);
         };
         var oldHandleEnd = this.handleEnd;
         this.handleEnd = function () {
@@ -335,8 +340,8 @@ var Each = function (_Lib) {
             params[_key3] = arguments[_key3];
           }
 
-          oldHandleEnd.apply(_this5, params);
-          progress.apply(_this5, params);
+          oldHandleEnd.apply(_this6, params);
+          progress.apply(_this6, params);
         };
       }
     }
@@ -363,7 +368,7 @@ var Each = function (_Lib) {
   }, {
     key: '_createQueue',
     value: function _createQueue() {
-      var _this6 = this;
+      var _this7 = this;
 
       var unCalledTask = this.task.filter(function (s) {
         return s.status === _constants.UNCALL;
@@ -378,16 +383,16 @@ var Each = function (_Lib) {
       if (canCallCount < 1) return;
       unCalledTask.slice(0, canCallCount).map(function (s) {
         var step = orderList.indexOf(s.order);
-        _this6.task[step].status = _constants.CALLING;
-        _this6.sleep(_this6._getStepBettwen()).then(function () {
-          _this6._callTaskHandle(step);
+        _this7.task[step].status = _constants.CALLING;
+        _this7.sleep(_this7._getStepBettwen()).then(function () {
+          _this7._callTaskHandle(step);
         });
       });
     }
   }, {
     key: '_beginTask',
     value: function _beginTask() {
-      var _this7 = this;
+      var _this8 = this;
 
       var singleTaskCalledNum = 0;
       var result = [];
@@ -395,50 +400,51 @@ var Each = function (_Lib) {
       this._createQueue();
       return new Promise(function (resolve, reject) {
         // bind action
-        _this7.event.on(_this7._actionName, function (_ref2) {
+        _this8.event.on(_this8._actionName, function (_ref2) {
           var error = _ref2.error,
               output = _ref2.output,
               step = _ref2.step;
 
-          if (_this7.taskStatus === _constants.CALLED) return;
+          if (_this8.taskStatus === _constants.CALLED) return;
           // check if continue
-          if (_this7._stopAtNextTrick) {
-            _this7.taskStatus = _constants.CALLED;
+          if (_this8._stopAtNextTrick) {
+            _this8.taskStatus = _constants.CALLED;
             resolve(result);
+            _this8.event.emit('TASKSTOPED');
             return;
           }
           // chech if enough success result
-          if (_this7.maxSuccessCount && result.filter(function (item) {
+          if (_this8.maxSuccessCount && result.filter(function (item) {
             return !item.error;
-          }).length >= _this7.maxSuccessCount) {
-            _this7._debug('Enough success result, task will stop!');
-            _this7.taskStatus = _constants.CALLED;
+          }).length >= _this8.maxSuccessCount) {
+            _this8._debug('Enough success result, task will stop!');
+            _this8.taskStatus = _constants.CALLED;
             resolve(result);
             return;
           }
           if (error) {
             // if set errorRetry
-            if (_this7.errorRetry > singleTaskCalledNum) {
+            if (_this8.errorRetry > singleTaskCalledNum) {
               singleTaskCalledNum += 1;
-              _this7.task[step].status = _constants.UNCALL;
+              _this8.task[step].status = _constants.UNCALL;
               // reinit queue
-              _this7._createQueue();
+              _this8._createQueue();
               return;
             }
-            error = _this7._makeError(error);
-            if (_this7.rejectOnError) {
+            error = _this8._makeError(error);
+            if (_this8.rejectOnError) {
               return reject(error);
             }
           }
           singleTaskCalledNum = 0;
-          _this7.task[step].status = _constants.CALLED;
-          result.push(_this7.removeUndefined(_extends({}, _this7.task[step], { output: output, error: error, handle: undefined, status: undefined, stepKey: undefined })));
-          if (_this7.task.filter(function (s) {
+          _this8.task[step].status = _constants.CALLED;
+          result.push(_this8.removeUndefined(_extends({}, _this8.task[step], { output: output, error: error, handle: undefined, status: undefined, stepKey: undefined })));
+          if (_this8.task.filter(function (s) {
             return s.status === _constants.CALLED;
-          }).length !== _this7.task.length) {
-            _this7._createQueue();
+          }).length !== _this8.task.length) {
+            _this8._createQueue();
           } else {
-            _this7.taskStatus = _constants.CALLED;
+            _this8.taskStatus = _constants.CALLED;
             resolve(result);
           }
         });
@@ -460,7 +466,7 @@ var Each = function (_Lib) {
   }, {
     key: '_callTaskHandle',
     value: function _callTaskHandle() {
-      var _this8 = this;
+      var _this9 = this;
 
       var step = arguments.length > 0 && arguments[0] !== undefined ? arguments[0] : 0;
       var isRetry = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : false;
@@ -477,26 +483,26 @@ var Each = function (_Lib) {
       };
       if (this.handleStart) this.handleStart(_extends({ step: step, all: allStep, progress: progress(completeStep) }, this.task[step], { isRetry: isRetry, cancelTask: this.cancelTask.bind(this) }));
       var succcesCallback = function succcesCallback(output) {
-        if (_this8.taskStatus === _constants.CALLED) return;
+        if (_this9.taskStatus === _constants.CALLED) return;
         if (status !== _constants.PENDING) return;
         status = _constants.RESOLVE;
         if (timer) clearInterval(timer);
-        var response = _extends({}, _this8.task[step], { all: allStep, progress: progress(completeStep + 1), output: output, error: null, step: step, isRetry: isRetry, cancelTask: _this8.cancelTask.bind(_this8) });
-        if (_this8.handleEnd) _this8.handleEnd(response);
-        _this8.event.emit(_this8._actionName, response);
+        var response = _extends({}, _this9.task[step], { all: allStep, progress: progress(completeStep + 1), output: output, error: null, step: step, isRetry: isRetry, cancelTask: _this9.cancelTask.bind(_this9) });
+        if (_this9.handleEnd) _this9.handleEnd(response);
+        _this9.event.emit(_this9._actionName, response);
       };
       var errorCallback = function errorCallback(error) {
-        if (_this8.taskStatus === _constants.CALLED) return;
+        if (_this9.taskStatus === _constants.CALLED) return;
         if (status !== _constants.PENDING) return;
         status = _constants.REJECT;
         if (timer) clearInterval(timer);
-        var response = _extends({}, _this8.task[step], { all: allStep, progress: progress(completeStep + 1), output: _this8._getTaskOutput, error: error, step: step, isRetry: isRetry });
-        if (_this8.handleEnd) _this8.handleEnd(response);
-        _this8.event.emit(_this8._actionName, response);
+        var response = _extends({}, _this9.task[step], { all: allStep, progress: progress(completeStep + 1), output: _this9._getTaskOutput, error: error, step: step, isRetry: isRetry });
+        if (_this9.handleEnd) _this9.handleEnd(response);
+        _this9.event.emit(_this9._actionName, response);
       };
       if (!this.isType(this.stepTimeout, undefined)) {
         timer = setTimeout(function () {
-          errorCallback(_this8._makeError('timeout!'));
+          errorCallback(_this9._makeError('timeout!'));
         }, this.stepTimeout);
       }
       var res = this.task[step].handle(this.task[step].input, step, this.cancelTask.bind(this), this.task[step].stepKey);

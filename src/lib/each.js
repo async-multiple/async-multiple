@@ -97,6 +97,9 @@ export default class Each extends Lib {
   cancelTask() {
     this._debug('Calling the cancelTask method, task will stop at next trick!')
     this._stopAtNextTrick = true
+    return new Promise((resolve, reject) => {
+      this.event.on('TASKSTOPED', resolve())
+    })
   }
 
   get _getTaskOutput() {
@@ -229,6 +232,7 @@ export default class Each extends Lib {
         if (this._stopAtNextTrick) {
           this.taskStatus = CALLED
           resolve(result)
+          this.event.emit('TASKSTOPED')
           return
         }
         // chech if enough success result
