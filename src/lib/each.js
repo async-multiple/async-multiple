@@ -258,7 +258,16 @@ export default class Each extends Lib {
         }
         singleTaskCalledNum = 0
         this.task[step].status = CALLED
-        result.push(this.removeUndefined({ ...this.task[step], output, error, handle: undefined, status: undefined, stepKey: undefined }))
+        result.push(
+          this.removeUndefined({
+            ...this.task[step],
+            output,
+            error,
+            handle: undefined,
+            status: undefined,
+            stepKey: undefined
+          })
+        )
         if (this.task.filter(s => s.status === CALLED).length !== this.task.length) {
           this._createQueue()
         } else {
